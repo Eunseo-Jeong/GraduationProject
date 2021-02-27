@@ -67,23 +67,64 @@ class PixelMapper(object):
 
         return (pixel[:2, :] / pixel[2, :]).T
 
-
 def save_lonlat_frame(point, pm,frame_num ,input_dir, output_dir):
     map = cv2.imread(input_dir, -1)
+
     #1541
     for frames in range(1, frame_num): #object ID마다 색깔바꿔서 점찍기
-        for label in point.get(str(frames)):
-            uv = (label[1], label[2])
-            lonlat = list(pm.pixel_to_lonlat(uv))
-            color = getcolor(abs(label[0]))
-            cv2.circle(map, (int(lonlat[0][0]), int(lonlat[0][1])), 3, color, -1)
+        if point.get(str(frames)) != None:
+            for label in point.get(str(frames)) :
+                uv = (label[1], label[2])
+                lonlat = list(pm.pixel_to_lonlat(uv))
+                color = getcolor(abs(label[0]))
+                cv2.circle(map, (int(lonlat[0][0]), int(lonlat[0][1])), 3, color, -1)
 
         src = os.path.join(output_dir, str(frames)+'.jpg')
         cv2.imwrite(src, map)
-    return map.shape[0], map.shape[1]
+
+#
+# def save_lonlat_frame(point, pm,frame_num ,input_dir, output_dir):
+#     map = cv2.imread(input_dir, -1)
+#     #1541
+#     for frames in range(1, frame_num): #object ID마다 색깔바꿔서 점찍기
+#         for label in point.get(str(frames)):
+#             uv = (label[1], label[2])
+#             lonlat = list(pm.pixel_to_lonlat(uv))
+#             color = getcolor(abs(label[0]))
+#             cv2.circle(map, (int(lonlat[0][0]), int(lonlat[0][1])), 3, color, -1)
+#
+#         src = os.path.join(output_dir, str(frames)+'.jpg')
+#         cv2.imwrite(src, map)
+#     return map.shape[0], map.shape[1]
 
 def scaling(x_value, y_value, x_max, y_max):
     x_scaled = round(x_value/x_max, 2)
     y_scaled = round(y_value/y_max, 2)
     return x_scaled, y_scaled
+
+
+def save_dict(file):
+    ##################################################
+    frame = 0
+    point = dict()
+    while True:
+        line = file.readline()
+
+        if not line:
+            break
+
+        info = line[:-1].split(" ")
+
+        frame = info[0]
+
+        if info[0] in point:
+            line = point.get(info[0])
+            line.append(list(map(int, info[1:])))
+        else:
+            point[info[0]] = [list(map(int, info[1:]))]
+
+    file.close()
+
+    return frame, point
+    ###########################################################################
 
