@@ -55,12 +55,14 @@ for i in range(num):
     globals()['frame{}'.format(i)], globals()['point{}'.format(i)] = save_dict(file)
 
     # save_lonlat_frame(globals()['point{}'.format(i)], pm, int(globals()['frame{}'.format(i)]), 'maps.png', './demo')
-
 import cv2
 from function import getcolor
 import os
 
 map = cv2.imread('maps.png', -1)
+
+for i in range(2):
+    globals()['BEV_Point{}'.format(i)] = dict()
 
 # 1541
 for frames in range(1, int(globals()['frame{}'.format(0)])):  # object ID마다 색깔바꿔서 점찍기
@@ -70,9 +72,57 @@ for frames in range(1, int(globals()['frame{}'.format(0)])):  # object ID마다 
             for label in globals()['point{}'.format(i)].get(str(frames)):
                 uv = (label[1], label[2])
                 lonlat = list(pm.pixel_to_lonlat(uv))
+                li = [label[0], int(lonlat[0][0]), int(lonlat[0][1])]
+                if frames in globals()['BEV_Point{}'.format(i)]:
+                    line = globals()['BEV_Point{}'.format(i)].get(frames)
+                    line.append(li)
+                else:
+                    globals()['BEV_Point{}'.format(i)][frames] = [li]
+
                 color = getcolor(abs(label[0]))
                 cv2.circle(map, (int(lonlat[0][0]), int(lonlat[0][1])), 3, color, -1)
 
         src = os.path.join('./demo', str(frames) + '.jpg')
         cv2.imwrite(src, map)
 
+
+# heatmap
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
+df = pd.DataFrame(index=range(0, 12), columns=range(0, 19))
+df = df.fillna(0)
+
+measure_df = pd.DataFrame()
+
+for frames in range(1, int(globals()['frame{}'.format(0)])):
+    if globals()['BEV_Point{}'.format(0)].get(frames) is not None:
+        for label in globals()['BEV_Point{}'.format(0)].get(frames):
+            measure_df = measure_df.append(pd.DataFrame([[int(label[1]), int(label[2])]], columns=['x', 'y']))
+
+print(measure_df['x'].max())
+print(measure_df['x'].min())
+print(measure_df['y'].max())
+print(measure_df['y'].min())
+
+
+for frames in range(1, int(globals()['frame{}'.format(0)])):
+    for i in range(num):
+        if globals()['BEV_Point{}'.format(i)].get(frames) is not None:
+            for label in globals()['BEV_Point{}'.format(i)].get(frames):
+                if label[2] < 0 or label[1] < 0 or label[1] > 1041 or label[2] > 668 :
+                    continue
+
+    #            print(label[1], label[2],round(int(label[1]) / 1000 * 19), round(int(label[2]) / 600 * 12))
+                df.loc[round(int(label[2]) / 668 * 11)][round(int(label[1]) / 1041 * 18)] += 1
+
+file.close()
+
+df = df.replace(0, np.nan)
+df = df.reset_index(drop=True)
+
+print(df)
+sns.heatmap(df, linewidths=0.1, linecolor="black")
+plt.show()
